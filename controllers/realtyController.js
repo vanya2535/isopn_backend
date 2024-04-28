@@ -95,7 +95,7 @@ class RealtyController {
                 return res.status(400).json({ message: 'Недостаточно прав для удаления' });
             }
 
-            realty.images.forEach((image) => fileService.removeFile(image))
+            realty.images.forEach((image) => fileService.removeFile(image));
 
             await Realty.deleteOne(realty);
 
