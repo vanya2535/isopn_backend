@@ -17,4 +17,4 @@ module.exports.verifyToken = function(token) {
             expired: e instanceof jwt.TokenExpiredError,
         };
     }
-}
+};

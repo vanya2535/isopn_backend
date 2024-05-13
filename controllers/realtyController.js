@@ -1,43 +1,41 @@
-const { validationResult } = require('express-validator');
 const Realty = require('../models/Realty.js');
-const { mapErrors } = require('../utils/errors.js');
 const fileService = require('../services/fileService.js');
+const { Types: { ObjectId } } = require('mongoose');
 
-const realtyJson = ({ _id, images, price, rooms, floor, ceilingHeight, coords }) => ({
+
+const realtyJson = ({ _id, images, price, rooms, link, floor, location, coords, advantages }) => ({
     _id,
     images,
     price,
     rooms,
+    link,
     floor,
-    ceilingHeight,
+    location,
     coords,
+    advantages,
 });
 
 class RealtyController {
     async create(req, res) {
         try {
-            const errors = validationResult(req);
-
-            if (!errors.isEmpty()) {
-                return res.status(400).json(mapErrors(errors));
-            }
-
-            const { price, rooms, floor, ceilingHeight, coords } = req.body;
-            const images = req.files?.images || [];
+            const { price, rooms, link, floor, location, coords, advantages } = req.parsedBody;
+            const addImages = req.parsedFiles?.addImages || [];
 
             const realty = new Realty({
                 userId: req.user._id,
-                images: images.map(image => fileService.saveFile(image)),
+                images: addImages.map(image => fileService.saveFile(image)),
                 price,
                 rooms,
+                link,
                 floor,
-                ceilingHeight,
+                location,
                 coords,
+                advantages,
             });
 
             await realty.save();
 
-            return res.json({ realty: realtyJson(realty) });
+            return res.json({ result: realtyJson(realty) });
         } catch (e) {
             console.log(e);
             return res.status(400).json({ message: 'Ошибка в процессе создания объекта недвижимости' });
@@ -46,22 +44,42 @@ class RealtyController {
 
     async get(req, res) {
         try {
-            const realties = await Realty.find({ userId: req.user._id });
-            return res.json({ realty: realties.map(realtyJson) });
+            const { offset, limit } = req.query;
+
+            const realties = await Realty.find({ userId: req.user._id }).skip(offset).limit(limit);
+            const count = await Realty.countDocuments({ userId: req.user._id });
+
+            return res.json({ count, result: realties.map(realtyJson) });
         } catch (e) {
             console.log(e);
             return res.status(400).json({ message: 'Ошибка в процессе получения объектов недвижимости' });
         }
     }
 
-    async update(req, res) {
+    async getStats(req, res) {
         try {
-            const errors = validationResult(req);
+            const realties = await Realty.find({ userId: req.user._id }).select(['price', 'rooms.living']);
 
-            if (!errors.isEmpty()) {
-                return res.status(400).json(mapErrors(errors));
+            const priceRes = {};
+            for (let realty of realties) {
+                const segment = Number.parseInt(realty.price / 1000000);
+                priceRes[segment + 1] = (priceRes[segment + 1] || 0) + 1;
+            }
+            
+            const roomsRes = {};
+            for (let rooms of realties.map(({ rooms }) => rooms.reduce((acc, val) => acc += val.living ? 1 : 0, 0))) {
+                roomsRes[rooms] = (roomsRes[rooms] || 0) + 1;
             }
 
+            return res.json({ result: { price: priceRes, rooms: roomsRes } });
+        } catch (e) {
+            console.log(e);
+            return res.status(400).json({ message: 'Ошибка в процессе получения статистики об объектах недвижимости' });
+        }
+    }
+
+    async update(req, res) {
+        try {
             const realty = await Realty.findById(req.params.id);
             if (!realty) {
                 return res.status(400).json({ message: 'Объект недвижимости не найден' });
@@ -71,13 +89,24 @@ class RealtyController {
                 return res.status(400).json({ message: 'Недостаточно прав для редактирования' });
             }
 
-            ['price', 'rooms', 'floor', 'ceilingHeight', 'coords'].forEach(key => {
-                realty[key] = req.body[key];
+            ['price', 'rooms', 'link', 'floor', 'location', 'coords', 'advantages'].forEach(key => {
+                realty[key] = req.parsedBody[key];
             });
+            
+            let realtyImages = realty.images;
 
+            const removeImages = req.parsedBody?.removeImages || [];
+            removeImages.forEach(image => fileService.removeFile(image));
+
+            realtyImages = realtyImages.filter(image => !removeImages.includes(image));
+
+            const addImages = req.parsedFiles?.addImages || [];
+            realtyImages.push(...addImages.map(image => fileService.saveFile(image)));
+
+            realty.images = realtyImages;
             await realty.save();
 
-            return res.json(realtyJson(realty));
+            return res.json({ result: realtyJson(realty) });
         } catch (e) {
             console.log(e);
             return res.status(400).json({ message: 'Ошибка в процессе обновления объекта недвижимости' });
@@ -95,9 +124,9 @@ class RealtyController {
                 return res.status(400).json({ message: 'Недостаточно прав для удаления' });
             }
 
-            realty.images.forEach((image) => fileService.removeFile(image));
+            realty.images.forEach(image => fileService.removeFile(image));
 
-            await Realty.deleteOne(realty);
+            await Realty.deleteOne({ _id: new ObjectId(req.params.id) });
 
             return res.json({});
         } catch (e) {

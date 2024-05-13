@@ -12,14 +12,14 @@ module.exports = async function(req, res, next) {
         if (!accessToken) {
             return res.status(403).json({ message: 'Пользователь не авторизован' });
         }
-
+        
         const accessTokenData = verifyToken(accessToken);
         if (accessTokenData.expired) {
             const refreshTokenData = verifyToken(refreshToken);
             if (refreshTokenData.expired) {
                 return res.status(403).json({ message: 'Пользователь не авторизован' });
             }
-
+            
             const user = await User.findOne({ refreshToken });
             if (!user) {
                 return res.status(403).json({ message: 'Пользователь не авторизован' });
@@ -29,7 +29,7 @@ module.exports = async function(req, res, next) {
             const newRefreshToken = generateRefreshToken(user._id);
 
             req.user = {
-                _id: user._id,
+                _id: `${user._id}`,
                 email: user.email,
                 accessToken: newAccessToken,
                 refreshToken: newRefreshToken,
@@ -53,4 +53,4 @@ module.exports = async function(req, res, next) {
         console.log(e);
         return res.status(403).json({ message: 'Пользователь не авторизован' });
     }
-}
+};

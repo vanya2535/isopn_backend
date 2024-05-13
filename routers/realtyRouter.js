@@ -2,22 +2,28 @@ const Router = require('express');
 const { check } = require('express-validator');
 const realtyController = require('../controllers/realtyController.js');
 const authMiddleware = require('../middleware/authMiddleware.js');
+const formDataMiddleware = require('../middleware/formDataMiddleware.js');
 
 const router = new Router();
 
 router.post('/create', [
     authMiddleware,
-    check('price', 'Минимальная стоимость - 1₽').isFloat({ min: 1 }),
+    formDataMiddleware,
+    formDataMiddleware,
 ], realtyController.create);
 
 router.patch('/update/:id', [
     authMiddleware,
-    check('price', 'Минимальная стоимость - 1₽').isFloat({ min: 1 }),
+    formDataMiddleware,
 ], realtyController.update);
 
 router.get('/', [
     authMiddleware,
 ], realtyController.get);
+
+router.get('/stats', [
+    authMiddleware,
+], realtyController.getStats);
 
 router.delete('/delete/:id', [
     authMiddleware,

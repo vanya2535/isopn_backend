@@ -13,20 +13,43 @@ const Realty = new Schema({
     },
 
     rooms: [{
+        id: {
+            type: Number,
+            required: true,
+        },
+
+        name: {
+            type: String,
+            required: true,
+        },
+
         area: {
             type: Number,
             required: true,
         },
 
-        isLiving: {
+        living: {
             type: Boolean,
             default: false,
         },
     }],
 
+    advantages: [{
+        id: {
+            type: Number,
+            required: true,
+        },
+
+        name: {
+            type: String,
+            required: true,
+        },
+    }],
+
     images: [String],
+    link: String,
     floor: Number,
-    ceilingHeight: Number,
+    location: String,
     coords: Array,
 });
 
