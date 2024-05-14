@@ -46,6 +46,18 @@ const Realty = new Schema({
         },
     }],
 
+    disadvantages: [{
+        id: {
+            type: Number,
+            required: true,
+        },
+
+        name: {
+            type: String,
+            required: true,
+        },
+    }],
+
     images: [String],
     link: String,
     floor: Number,

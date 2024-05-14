@@ -3,7 +3,7 @@ const fileService = require('../services/fileService.js');
 const { Types: { ObjectId } } = require('mongoose');
 
 
-const realtyJson = ({ _id, images, price, rooms, link, floor, location, coords, advantages }) => ({
+const realtyJson = ({ _id, images, price, rooms, link, floor, location, coords, advantages, disadvantages }) => ({
     _id,
     images,
     price,
@@ -13,12 +13,13 @@ const realtyJson = ({ _id, images, price, rooms, link, floor, location, coords, 
     location,
     coords,
     advantages,
+    disadvantages,
 });
 
 class RealtyController {
     async create(req, res) {
         try {
-            const { price, rooms, link, floor, location, coords, advantages } = req.parsedBody;
+            const { price, rooms, link, floor, location, coords, advantages, disadvantages } = req.parsedBody;
             const addImages = req.parsedFiles?.addImages || [];
 
             const realty = new Realty({
@@ -31,6 +32,7 @@ class RealtyController {
                 location,
                 coords,
                 advantages,
+                disadvantages,
             });
 
             await realty.save();
@@ -71,7 +73,20 @@ class RealtyController {
                 roomsRes[rooms] = (roomsRes[rooms] || 0) + 1;
             }
 
-            return res.json({ result: { price: priceRes, rooms: roomsRes } });
+            const allRealties = await Realty.find().select(['price', 'rooms.living']);
+
+            const allPriceRes = {};
+            for (let realty of allRealties) {
+                const segment = Number.parseInt(realty.price / 1000000);
+                allPriceRes[segment + 1] = (allPriceRes[segment + 1] || 0) + 1;
+            }
+            
+            const allRoomsRes = {};
+            for (let rooms of allRealties.map(({ rooms }) => rooms.reduce((acc, val) => acc += val.living ? 1 : 0, 0))) {
+                allRoomsRes[rooms] = (allRoomsRes[rooms] || 0) + 1;
+            }
+
+            return res.json({ result: { price: priceRes, rooms: roomsRes, allPrice: allPriceRes, allRooms: allRoomsRes } });
         } catch (e) {
             console.log(e);
             return res.status(400).json({ message: 'Ошибка в процессе получения статистики об объектах недвижимости' });
@@ -89,7 +104,7 @@ class RealtyController {
                 return res.status(400).json({ message: 'Недостаточно прав для редактирования' });
             }
 
-            ['price', 'rooms', 'link', 'floor', 'location', 'coords', 'advantages'].forEach(key => {
+            ['price', 'rooms', 'link', 'floor', 'location', 'coords', 'advantages', 'disadvantages'].forEach(key => {
                 realty[key] = req.parsedBody[key];
             });
             
