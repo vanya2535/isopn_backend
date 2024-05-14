@@ -29,6 +29,6 @@ module.exports.sendChangePasswordMail = async user => {
         to: user.email,
         subject: 'Смена пароля ISOPN',
         text: 'Для смены пароля в ISOPN перейдите по ссылке',
-        html: `Для смены пароля в ISOPN перейдите по ссылке <a href="${getLink('change', user.updateToken)}" target="_blank">${getLink('confirm', user.updateToken)}</a>`,
+        html: `Для смены пароля в ISOPN перейдите по ссылке <a href="${getLink('change', user.updateToken)}" target="_blank">${getLink('change', user.updateToken)}</a>`,
     });
 };
