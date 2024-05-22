@@ -62,7 +62,7 @@ const Realty = new Schema({
     link: String,
     floor: Number,
     location: String,
-    coords: Array,
+    coords: [Number],
 });
 
 module.exports = model('Realty', Realty);
