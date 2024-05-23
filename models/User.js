@@ -15,6 +15,7 @@ const User = new Schema({
     updateToken: {
         type: String,
         required: true,
+        unique: true,
     },
 
     emailConfirmed: Boolean,
